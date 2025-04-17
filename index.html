@@ -11,7 +11,7 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            background: #f5f7fa; /* 浅灰背景 */
+            background: #f5f7fa;
             min-height: 100vh;
             margin: 0;
             padding: 20px;
@@ -24,7 +24,7 @@
         }
         #videoContainer {
             position: relative;
-            border: 1px solid #e0e0e0; /* 简洁边框 */
+            border: 1px solid #e0e0e0;
             border-radius: 8px;
             background: #fff;
             padding: 15px;
@@ -64,7 +64,7 @@
             font-size: 1em;
             font-weight: 500;
             cursor: pointer;
-            background-color: #007bff; /* 现代蓝色 */
+            background-color: #007bff;
             color: #fff;
             border: none;
             border-radius: 6px;
@@ -79,6 +79,11 @@
             margin-top: 20px;
             color: #555;
             font-size: 0.9em;
+        }
+        #loadingProgress {
+            margin-top: 10px;
+            font-size: 0.9em;
+            color: #777;
         }
     </style>
 </head>
@@ -104,11 +109,13 @@
         </div>
     </div>
     <p id="statusContainer">状态：<span id="status">加载图片中...</span></p>
+    <p id="loadingProgress"></p>
 
     <script>
         const frameDisplay = document.getElementById('frameDisplay');
         const inputPrompt = document.getElementById('inputPrompt');
         const status = document.getElementById('status');
+        const loadingProgress = document.getElementById('loadingProgress');
 
         let modules = [];
         let selectedModules = [];
@@ -131,7 +138,7 @@
             return moduleIndices.slice(0, SELECTED_MODULE_COUNT);
         }
 
-        // 加载模块图片
+        // 加载模块图片（不限制数量）
         async function loadModuleFrames(moduleNum) {
             const frames = [];
             let frameIndex = 1;
@@ -153,28 +160,50 @@
                     time: ((frameIndex - 1) * FRAME_INTERVAL) / 1000
                 });
                 frameIndex++;
-                status.textContent = `加载模块 ${moduleNum}，帧 ${frameIndex - 1}...`;
             }
             return frames;
         }
 
-        // 加载所有选定模块
+        // 加载所有选定模块（并行加载）
         async function loadFrames() {
             selectedModules = shuffleModules();
             status.textContent = `加载模块 ${selectedModules.join(', ')}...`;
 
-            for (const moduleNum of selectedModules) {
-                const frames = await loadModuleFrames(moduleNum);
-                if (frames.length > 0) modules.push(frames);
+            // 优先加载第一个模块
+            const firstModuleNum = selectedModules[0];
+            const firstModuleFrames = await loadModuleFrames(firstModuleNum);
+            if (firstModuleFrames.length > 0) {
+                modules.push(firstModuleFrames);
+                status.textContent = '第一个模块加载完成，开始展示';
+                showNextFrame();
+            } else {
+                status.textContent = '第一个模块加载失败，请检查图片路径';
+                return;
             }
+
+            // 并行加载剩余模块
+            const remainingModules = selectedModules.slice(1);
+            let loadedModules = 1; // 已加载第一个模块
+            const totalModules = selectedModules.length;
+
+            const loadRemaining = remainingModules.map(async (moduleNum) => {
+                const frames = await loadModuleFrames(moduleNum);
+                if (frames.length > 0) {
+                    modules.push(frames);
+                    loadedModules++;
+                    const progress = Math.round((loadedModules / totalModules) * 100);
+                    loadingProgress.textContent = `加载进度：${progress}% (${loadedModules}/${totalModules} 模块)`;
+                }
+            });
+
+            await Promise.all(loadRemaining);
 
             if (modules.length === 0) {
                 status.textContent = '加载失败，请检查图片路径';
                 return;
             }
 
-            status.textContent = '图片加载完成，准备展示';
-            showNextFrame();
+            loadingProgress.textContent = '所有模块加载完成';
         }
 
         // 显示下一帧
