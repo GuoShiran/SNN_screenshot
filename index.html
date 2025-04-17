@@ -81,9 +81,6 @@
             font-weight: bold;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
-        canvas {
-            display: none;
-        }
     </style>
 </head>
 <body>
@@ -109,92 +106,83 @@
     </div>
     <p id="statusContainer">状态：<span id="status">加载图片中...</span></p>
 
-    <canvas id="frameCanvas" width="80" height="45"></canvas>
-
     <script src="https://apis.google.com/js/api.js"></script>
     <script>
         const frameDisplay = document.getElementById('frameDisplay');
         const inputPrompt = document.getElementById('inputPrompt');
         const status = document.getElementById('status');
-        const canvas = document.getElementById('frameCanvas');
-        const ctx = canvas.getContext('2d');
 
         let modules = [];
+        let selectedModules = [];
         let currentModuleIndex = 0;
         let currentFrameIndex = 0;
         let collectedData = [];
 
-        const FRAME_COUNT = 96; // 图片数量（frame_000000.png 到 frame_000095.png）
+        const MODULE_COUNT = 5; // module_1 到 module_5
+        const SELECTED_MODULE_COUNT = 3; // 随机选择 3 个模块
         const FRAME_INTERVAL = 20; // 每帧间隔 20ms
-        const BASE_URL = 'https://raw.githubusercontent.com/guoshiran/video-data-collection/main/';
+        const BASE_URL = 'https://raw.githubusercontent.com/guoshiran/video-data-collection/data/';
 
-        // 加载所有图片并划分模块
-        async function loadFrames() {
-            const frames = [];
-            for (let i = 0; i < FRAME_COUNT; i++) {
-                const frameNumber = i.toString().padStart(6, '0');
-                const frameUrl = `${BASE_URL}frame_${frameNumber}.png`;
-                const frame = {
-                    url: frameUrl,
-                    time: (i * FRAME_INTERVAL) / 1000 // 计算时间戳（秒）
-                };
-                frames.push(frame);
+        // 随机选择 3 个模块
+        function shuffleModules() {
+            const moduleIndices = Array.from({ length: MODULE_COUNT }, (_, i) => i + 1); // [1, 2, 3, 4, 5]
+            for (let i = moduleIndices.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [moduleIndices[i], moduleIndices[j]] = [moduleIndices[j], moduleIndices[i]];
             }
+            return moduleIndices.slice(0, SELECTED_MODULE_COUNT); // 取前 3 个
+        }
 
-            // 加载图片数据并比较帧差异
-            let currentModule = [];
-            let lastFrameData = null;
+        // 加载指定模块的图片
+        async function loadModuleFrames(moduleNum) {
+            const frames = [];
+            let frameIndex = 1;
 
-            for (let i = 0; i < frames.length; i++) {
+            while (true) {
+                const frameUrl = `${BASE_URL}module_${moduleNum}/module_${moduleNum}_frame_${frameIndex}.png`;
                 const img = new Image();
-                img.crossOrigin = 'Anonymous'; // 允许跨域加载（GitHub 可能需要）
-                img.src = frames[i].url;
+                img.src = frameUrl;
 
-                await new Promise(resolve => {
-                    img.onload = () => resolve();
-                    img.onerror = () => {
-                        console.error(`加载图片失败: ${frames[i].url}`);
-                        resolve(); // 即使失败也继续
-                    };
+                const loaded = await new Promise(resolve => {
+                    img.onload = () => resolve(true);
+                    img.onerror = () => resolve(false);
                 });
 
-                // 使用 canvas 比较帧差异
-                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                const currentFrameData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-
-                if (lastFrameData) {
-                    let diffCount = 0;
-                    for (let j = 0; j < currentFrameData.length; j += 4) {
-                        const rDiff = Math.abs(currentFrameData[j] - lastFrameData[j]);
-                        const gDiff = Math.abs(currentFrameData[j + 1] - lastFrameData[j + 1]);
-                        const bDiff = Math.abs(currentFrameData[j + 2] - lastFrameData[j + 2]);
-                        if (rDiff > 10 || gDiff > 10 || bDiff > 10) {
-                            diffCount++;
-                        }
-                    }
-                    const diffPercentage = (diffCount / (currentFrameData.length / 4)) * 100;
-                    console.log(`帧 ${i} 差异百分比: ${diffPercentage.toFixed(2)}%`);
-
-                    if (diffPercentage >= 2) {
-                        if (currentModule.length > 0) {
-                            modules.push(currentModule);
-                        }
-                        currentModule = [];
-                    }
+                if (!loaded) {
+                    break; // 图片加载失败，说明该模块的图片已全部加载
                 }
 
-                currentModule.push({
-                    dataUrl: frames[i].url,
-                    time: frames[i].time
+                frames.push({
+                    url: frameUrl,
+                    time: ((frameIndex - 1) * FRAME_INTERVAL) / 1000 // 计算时间戳（秒）
                 });
-                lastFrameData = new Uint8ClampedArray(currentFrameData);
+                frameIndex++;
             }
 
-            if (currentModule.length > 0) {
-                modules.push(currentModule);
+            return frames;
+        }
+
+        // 加载所有选中的模块
+        async function loadFrames() {
+            selectedModules = shuffleModules();
+            status.textContent = `加载模块 ${selectedModules.join(', ')}...`;
+            console.log('选中的模块:', selectedModules);
+
+            for (const moduleNum of selectedModules) {
+                const frames = await loadModuleFrames(moduleNum);
+                if (frames.length > 0) {
+                    modules.push(frames);
+                } else {
+                    console.error(`模块 ${moduleNum} 加载失败，图片数量为 0`);
+                }
             }
 
-            console.log('模块划分完成:', modules);
+            console.log('加载的模块:', modules);
+            if (modules.length === 0) {
+                status.textContent = '所有模块加载失败，请检查图片路径';
+                return;
+            }
+
             status.textContent = '图片加载完成，准备展示';
             showNextFrame();
         }
@@ -225,9 +213,9 @@
             }
 
             const frame = currentModule[currentFrameIndex];
-            frameDisplay.src = frame.dataUrl;
+            frameDisplay.src = frame.url;
             inputPrompt.style.display = 'block';
-            status.textContent = `模块 ${currentModuleIndex + 1}，帧 ${currentFrameIndex + 1}/${currentModule.length}`;
+            status.textContent = `模块 ${selectedModules[currentModuleIndex]}，帧 ${currentFrameIndex + 1}/${currentModule.length}`;
         }
 
         // 用户提交输入
