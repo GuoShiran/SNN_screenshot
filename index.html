@@ -16,20 +16,15 @@
         }
         h1 {
             color: #0277bd;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
             font-size: 2.5em;
             margin: 20px 0;
         }
         #videoContainer {
             position: relative;
-            display: inline-block;
             border: 2px solid #0288d1;
             border-radius: 10px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
             background: white;
             padding: 10px;
-            min-height: 200px;
-            min-width: 300px;
         }
         #frameDisplay {
             max-width: 100%;
@@ -37,17 +32,14 @@
         }
         #inputPrompt {
             position: absolute;
-            left: 0;
             top: 100%;
+            left: 0;
             background: #ffffff;
             padding: 15px;
             border: 1px solid #0288d1;
             border-radius: 8px;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-            z-index: 1000;
             width: 100%;
             text-align: center;
-            box-sizing: border-box;
             display: none;
         }
         #inputPrompt p {
@@ -59,7 +51,6 @@
             display: grid;
             grid-template-columns: repeat(4, 1fr);
             gap: 8px;
-            justify-items: center;
         }
         #inputPrompt button {
             padding: 10px 15px;
@@ -69,11 +60,9 @@
             color: white;
             border: none;
             border-radius: 5px;
-            transition: transform 0.1s ease, background-color 0.3s ease;
         }
         #inputPrompt button:hover {
             background-color: #45a049;
-            transform: scale(1.05);
         }
         #statusContainer {
             margin-top: 20px;
@@ -81,8 +70,6 @@
             background-color: #e1f5fe;
             border-radius: 20px;
             color: #01579b;
-            font-weight: bold;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
     </style>
 </head>
@@ -109,7 +96,6 @@
     </div>
     <p id="statusContainer">状态：<span id="status">加载图片中...</span></p>
 
-    <script src="https://apis.google.com/js/api.js"></script>
     <script>
         const frameDisplay = document.getElementById('frameDisplay');
         const inputPrompt = document.getElementById('inputPrompt');
@@ -124,9 +110,9 @@
         const MODULE_COUNT = 5; // module_1 到 module_5
         const SELECTED_MODULE_COUNT = 3; // 随机选择 3 个模块
         const FRAME_INTERVAL = 20; // 每帧间隔 20ms
-        const BASE_URL = 'https://raw.githubusercontent.com/guoshiran/SNN_screenshot/data/';
+        const BASE_URL = 'https://raw.githubusercontent.com/guoshiran/SNN_screenshot/main/data/';
 
-        // 随机选择 3 个模块
+        // 随机选择模块
         function shuffleModules() {
             const moduleIndices = Array.from({ length: MODULE_COUNT }, (_, i) => i + 1);
             for (let i = moduleIndices.length - 1; i > 0; i--) {
@@ -136,7 +122,7 @@
             return moduleIndices.slice(0, SELECTED_MODULE_COUNT);
         }
 
-        // 加载指定模块的图片
+        // 加载模块图片
         async function loadModuleFrames(moduleNum) {
             const frames = [];
             let frameIndex = 1;
@@ -151,10 +137,7 @@
                     img.onerror = () => resolve(false);
                 });
 
-                if (!loaded) {
-                    console.log(`模块 ${moduleNum} 加载完成，帧数量: ${frames.length}`);
-                    break;
-                }
+                if (!loaded) break;
 
                 frames.push({
                     url: frameUrl,
@@ -163,28 +146,21 @@
                 frameIndex++;
                 status.textContent = `加载模块 ${moduleNum}，帧 ${frameIndex - 1}...`;
             }
-
             return frames;
         }
 
-        // 加载所有选中的模块
+        // 加载所有选定模块
         async function loadFrames() {
             selectedModules = shuffleModules();
             status.textContent = `加载模块 ${selectedModules.join(', ')}...`;
-            console.log('选中的模块:', selectedModules);
 
             for (const moduleNum of selectedModules) {
                 const frames = await loadModuleFrames(moduleNum);
-                if (frames.length > 0) {
-                    modules.push(frames);
-                } else {
-                    console.error(`模块 ${moduleNum} 加载失败，图片数量为 0`);
-                }
+                if (frames.length > 0) modules.push(frames);
             }
 
-            console.log('加载的模块:', modules);
             if (modules.length === 0) {
-                status.textContent = '所有模块加载失败，请检查图片路径';
+                status.textContent = '加载失败，请检查图片路径';
                 return;
             }
 
@@ -197,22 +173,13 @@
             if (currentModuleIndex >= modules.length) {
                 status.textContent = '所有模块已展示，数据已收集';
                 console.log('收集的数据：', collectedData);
-                alert('数据收集完成，请检查控制台或后端记录！');
+                alert('数据收集完成！');
                 inputPrompt.style.display = 'none';
                 return;
             }
 
             const currentModule = modules[currentModuleIndex];
-            if (!currentModule || currentModule.length === 0) {
-                console.error('当前模块为空，跳到下一模块');
-                currentModuleIndex++;
-                currentFrameIndex = 0;
-                showNextFrame();
-                return;
-            }
-
             if (currentFrameIndex >= currentModule.length) {
-                console.log(`模块 ${selectedModules[currentModuleIndex]} 图片展示完毕，切换到下一模块`);
                 currentModuleIndex++;
                 currentFrameIndex = 0;
                 showNextFrame();
@@ -223,18 +190,12 @@
             frameDisplay.src = frame.url;
             inputPrompt.style.display = 'block';
             status.textContent = `模块 ${selectedModules[currentModuleIndex]}，帧 ${currentFrameIndex + 1}/${currentModule.length}`;
-            console.log(`显示模块 ${selectedModules[currentModuleIndex]}，帧 ${currentFrameIndex + 1}`);
         }
 
-        // 用户提交输入
+        // 处理用户输入
         function submitInput(value) {
             console.log(`按钮点击，值: ${value}`);
             const currentModule = modules[currentModuleIndex];
-            if (!currentModule || currentFrameIndex >= currentModule.length) {
-                console.error('当前模块或帧无效');
-                return;
-            }
-
             const frame = currentModule[currentFrameIndex];
 
             const data = {
@@ -243,68 +204,21 @@
                 userInput: value
             };
             collectedData.push(data);
-
-            console.log(`记录数据: 时间=${data.videoTime}s, 选择=${data.userInput}`);
             status.textContent = `已记录：时间=${data.videoTime}s, 选择=${data.userInput}`;
-            sendDataToGoogleSheets(data);
 
             inputPrompt.style.display = 'none';
 
             if (value === 'n') {
                 currentFrameIndex++;
-                console.log(`按下 'n'，切换到帧 ${currentFrameIndex + 1}`);
             } else {
                 currentModuleIndex++;
                 currentFrameIndex = 0;
-                console.log(`按下非 'n' 按钮，切换到模块 ${selectedModules[currentModuleIndex] || '无'}`);
             }
-
             showNextFrame();
         }
 
-        // Google Sheets API 设置
-        const CLIENT_ID = 'YOUR_GOOGLE_CLIENT_ID';
-        const API_KEY = 'YOUR_GOOGLE_API_KEY';
-        const SPREADSHEET_ID = 'YOUR_SPREADSHEET_ID';
-        const DISCOVERY_DOCS = ["https://sheets.googleapis.com/$discovery/rest?version=v4"];
-        const SCOPES = "https://www.googleapis.com/auth/spreadsheets";
-
-        function initGoogleSheets() {
-            gapi.load('client:auth2', () => {
-                gapi.client.init({
-                    apiKey: API_KEY,
-                    clientId: CLIENT_ID,
-                    discoveryDocs: DISCOVERY_DOCS,
-                    scope: SCOPES
-                }).then(() => {
-                    console.log('Google Sheets API 初始化成功');
-                }).catch((error) => {
-                    console.error('Google Sheets API 初始化失败:', error);
-                });
-            });
-        }
-
-        function sendDataToGoogleSheets(data) {
-            gapi.client.sheets.spreadsheets.values.append({
-                spreadsheetId: SPREADSHEET_ID,
-                range: 'Sheet1!A:C',
-                valueInputOption: 'RAW',
-                insertDataOption: 'INSERT_ROWS',
-                resource: {
-                    values: [[data.timestamp, data.videoTime, data.userInput]]
-                }
-            }).then((response) => {
-                console.log('数据已发送到 Google Sheets:', response);
-            }).catch((error) => {
-                console.error('发送数据失败:', error);
-            });
-        }
-
-        // 页面加载时开始加载图片
-        document.addEventListener('DOMContentLoaded', () => {
-            initGoogleSheets();
-            loadFrames();
-        });
+        // 初始化
+        document.addEventListener('DOMContentLoaded', loadFrames);
     </script>
 </body>
 </html>
