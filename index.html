@@ -212,6 +212,16 @@
         const BASE_URL = 'https://raw.githubusercontent.com/guoshiran/SNN_screenshot/data/';
         const GOOGLE_FORM_URL = 'https://docs.google.com/forms/u/0/d/e/1FAIpQLSfusBxX1cNbsastoKk1CwRMNt6lNvZ2290zl2XQe0zBWP1wQQ/formResponse';
 
+        // 从路径中提取 module 编号
+        function extractModuleNumber(path) {
+            const match = path.match(/module_(\d+)/);
+            if (match && match[1]) {
+                return Number(match[1]); // 提取并转换为数字
+            }
+            console.error('无法从路径中提取 module 编号:', path);
+            return 0; // 默认值
+        }
+
         // 随机选择模块，忽略 module_66
         function shuffleModules() {
             const moduleIndices = Array.from({ length: MODULE_COUNT }, (_, i) => i + 1).filter(num => num !== 66);
@@ -244,9 +254,12 @@
 
                 if (!loaded) break;
 
+                // 从路径中提取 module 编号
+                const moduleValue = extractModuleNumber(frameUrl);
                 frames.push({
                     url: frameUrl,
-                    time: ((frameIndex - 1) * FRAME_INTERVAL) / 1000
+                    time: ((frameIndex - 1) * FRAME_INTERVAL) / 1000,
+                    module: moduleValue // 存储 module 编号
                 });
                 frameIndex++;
             }
@@ -320,27 +333,15 @@
             }
 
             const frame = currentModule[currentFrameIndex];
-            framephysics: frameDisplay.src = frame.url;
+            frameDisplay.src = frame.url;
             inputPrompt.style.display = 'block';
-            status.textContent = `模块 ${selectedModules[currentModuleIndex]}，帧 ${currentFrameIndex + 1}/${currentModule.length}`;
-        }
-
-        // 实时获取当前 module 值
-        function getCurrentModule() {
-            if (currentModuleIndex >= 0 && currentModuleIndex < selectedModules.length) {
-                const moduleValue = Number(selectedModules[currentModuleIndex]) || 0;
-                console.log('实时检测的 module 值:', moduleValue);
-                return moduleValue;
-            }
-            console.error('无法获取当前 module 值，索引无效:', currentModuleIndex);
-            return 0;
+            status.textContent = `模块 ${frame.module}，帧 ${currentFrameIndex + 1}/${currentModule.length}`;
         }
 
         // 发送数据到 Google Forms
         async function sendToGoogleSheets(data) {
             try {
-                // 实时获取当前 module 值
-                const moduleValue = getCurrentModule();
+                const moduleValue = data.module; // 直接使用 frame 中的 module 值
                 console.log('发送的 module 值:', moduleValue);
                 const formData = new FormData();
                 // 让 Google Forms 自动生成 Timestamp
@@ -396,13 +397,10 @@
                 return;
             }
 
-            // 实时获取当前 module 值
-            const moduleValue = getCurrentModule();
-
             const data = {
                 timestamp: new Date().toISOString(),
                 email: userEmail || 'unknown',
-                module: moduleValue,
+                module: frame.module, // 直接使用 frame 中的 module 值
                 videoTime: frame.time ? frame.time.toFixed(2) : '0.00',
                 userInput: value
             };
