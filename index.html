@@ -204,7 +204,7 @@
         let currentModuleIndex = 0;
         let currentFrameIndex = 0;
         let collectedData = [];
-        let userEmail = '';
+        let userEmail = ''; // 存储用户邮箱
 
         const MODULE_COUNT = 101; // module_1 到 module_101
         const SELECTED_MODULE_COUNT = 30; // 随机选择 30 个模块
@@ -221,7 +221,10 @@
             }
             const selected = moduleIndices.slice(0, SELECTED_MODULE_COUNT);
             console.log('随机选择的模块:', selected);
-            return selected;
+            // 确保每个元素是数字
+            const validatedModules = selected.map(num => Number(num));
+            console.log('验证后的模块:', validatedModules);
+            return validatedModules;
         }
 
         // 加载模块图片
@@ -273,7 +276,7 @@
             let loadedModules = 1;
             const totalModules = selectedModules.length;
 
-            const loadRemaining = remainingModules.map(async (moduleNum, index) => {
+            const loadRemaining = remainingModules.map(async (moduleNum) => {
                 const frames = await loadModuleFrames(moduleNum);
                 if (frames.length > 0) {
                     modules.push(frames);
@@ -282,8 +285,6 @@
                     loadingProgress.textContent = `加载进度：${progress}% (${loadedModules}/${totalModules} 模块)`;
                 } else {
                     console.warn(`模块 ${moduleNum} 加载失败，帧数为 0`);
-                    // 从 selectedModules 中移除加载失败的模块
-                    selectedModules.splice(loadedModules - 1 + index, 1);
                 }
             });
 
@@ -295,7 +296,6 @@
             }
 
             console.log(`总共加载了 ${modules.length} 个模块`);
-            console.log('最终加载的模块:', selectedModules);
             loadingProgress.textContent = '所有模块加载完成';
         }
 
@@ -320,20 +320,34 @@
             }
 
             const frame = currentModule[currentFrameIndex];
-            frameDisplay.src = frame.url;
+            framephysics: frameDisplay.src = frame.url;
             inputPrompt.style.display = 'block';
             status.textContent = `模块 ${selectedModules[currentModuleIndex]}，帧 ${currentFrameIndex + 1}/${currentModule.length}`;
+        }
+
+        // 实时获取当前 module 值
+        function getCurrentModule() {
+            if (currentModuleIndex >= 0 && currentModuleIndex < selectedModules.length) {
+                const moduleValue = Number(selectedModules[currentModuleIndex]) || 0;
+                console.log('实时检测的 module 值:', moduleValue);
+                return moduleValue;
+            }
+            console.error('无法获取当前 module 值，索引无效:', currentModuleIndex);
+            return 0;
         }
 
         // 发送数据到 Google Forms
         async function sendToGoogleSheets(data) {
             try {
+                // 实时获取当前 module 值
+                const moduleValue = getCurrentModule();
+                console.log('发送的 module 值:', moduleValue);
                 const formData = new FormData();
-                formData.append('entry.1404874076', data.timestamp);
-                formData.append('entry.690842731', data.email);
-                formData.append('entry.1451353847', data.module.toString());
-                formData.append('entry.5521573744', data.videoTime);
-                formData.append('entry.540771953', data.userInput);
+                // 让 Google Forms 自动生成 Timestamp
+                formData.append('entry.735277437', moduleValue.toString()); // 将 module 写入 Module Number 字段
+                formData.append('entry.690842731', data.email); // Email
+                formData.append('entry.5521573744', data.videoTime); // Video Time
+                formData.append('entry.540771953', data.userInput); // User Input
 
                 const response = await fetch(GOOGLE_FORM_URL, {
                     method: 'POST',
@@ -352,6 +366,7 @@
             console.log(`当前模块索引: ${currentModuleIndex}, 选择的模块: ${selectedModules[currentModuleIndex]}`);
             console.log(`当前邮箱: ${userEmail}`);
 
+            // 检查模块索引
             if (currentModuleIndex >= modules.length || currentModuleIndex < 0) {
                 console.error('模块索引超出范围:', currentModuleIndex);
                 status.textContent = '错误：模块索引超出范围';
@@ -365,6 +380,7 @@
                 return;
             }
 
+            // 检查帧索引
             if (currentFrameIndex >= currentModule.length || currentFrameIndex < 0) {
                 console.error('帧索引超出范围:', { currentModuleIndex, currentFrameIndex, moduleLength: currentModule.length });
                 currentModuleIndex++;
@@ -380,10 +396,13 @@
                 return;
             }
 
+            // 实时获取当前 module 值
+            const moduleValue = getCurrentModule();
+
             const data = {
-                timestamp: selectedModules[currentModuleIndex] || 0,
+                timestamp: new Date().toISOString(),
                 email: userEmail || 'unknown',
-                module: selectedModules[currentModuleIndex] || 0, // 使用加载时的第 currentModuleIndex 个模块值
+                module: moduleValue,
                 videoTime: frame.time ? frame.time.toFixed(2) : '0.00',
                 userInput: value
             };
