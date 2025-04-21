@@ -211,6 +211,7 @@
         const SELECTED_MODULE_COUNT = 30; // 随机选择 30 个模块
         const FRAME_INTERVAL = 20; // 每帧间隔 20ms
         const BASE_URL = 'https://raw.githubusercontent.com/guoshiran/SNN_screenshot/data/';
+        const GOOGLE_SHEET_API_URL = 'https://script.google.com/macros/s/AKfycbx_f3Ofn637wzVDzt-ibhXzRRphgIxYrChc_Kt-wkSwyrjfcMHauLLjp1NJ6G7atbzZ/exec'; // 替换为你的 Google Apps Script Web 应用 URL
 
         // 随机选择模块，忽略 module_66
         function shuffleModules() {
@@ -314,6 +315,25 @@
             status.textContent = `模块 ${selectedModules[currentModuleIndex]}，帧 ${currentFrameIndex + 1}/${currentModule.length}`;
         }
 
+        // 发送数据到 Google Sheets
+        async function sendToGoogleSheets(data) {
+            try {
+                const response = await fetch(GOOGLE_SHEET_API_URL, {
+                    method: 'POST',
+                    body: JSON.stringify(data),
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                const result = await response.json();
+                if (result.status !== 'success') {
+                    console.error('写入 Google Sheets 失败:', result.message);
+                }
+            } catch (error) {
+                console.error('发送数据到 Google Sheets 时出错:', error);
+            }
+        }
+
         // 处理用户输入
         function submitInput(value) {
             console.log(`按钮点击，值: ${value}`);
@@ -322,12 +342,16 @@
 
             const data = {
                 timestamp: new Date().toISOString(),
+                email: emailInput.value,
+                module: selectedModules[currentModuleIndex],
                 videoTime: frame.time.toFixed(2),
-                userInput: value,
-                email: emailInput.value // 记录用户邮箱
+                userInput: value
             };
             collectedData.push(data);
             status.textContent = `已记录：时间=${data.videoTime}s, 选择=${data.userInput}`;
+
+            // 发送到 Google Sheets
+            sendToGoogleSheets(data);
 
             inputPrompt.style.display = 'none';
 
@@ -350,11 +374,6 @@
             mainPage.style.display = 'block';
             loadFrames();
         });
-    </script>
-</body>
-</html>
-        // 初始化
-        document.addEventListener('DOMContentLoaded', loadFrames);
     </script>
 </body>
 </html>
