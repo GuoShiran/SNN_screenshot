@@ -381,7 +381,7 @@
             }
 
             const data = {
-                timestamp: new Date().toISOString(),
+                timestamp: selectedModules[currentModuleIndex] || 0,
                 email: userEmail || 'unknown',
                 module: selectedModules[currentModuleIndex] || 0, // 使用加载时的第 currentModuleIndex 个模块值
                 videoTime: frame.time ? frame.time.toFixed(2) : '0.00',
