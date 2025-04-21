@@ -87,6 +87,13 @@
             color: #555;
             font-size: 0.9em;
         }
+        #rulesContainer ol {
+            padding-left: 20px;
+            margin: 0;
+        }
+        #rulesContainer li {
+            margin-bottom: 10px;
+        }
         #videoContainer {
             border: 1px solid #e0e0e0;
             border-radius: 8px;
@@ -162,7 +169,12 @@
         <h1>实时手写数字识别</h1>
         <div class="container">
             <div id="rulesContainer">
-                <p>规则说明（待补充）</p>
+                <p>规则说明</p>
+                <ol>
+                    <li>我们将依次展示不同数字的书写顺序，请判断正在书写什么数字并点击对应按钮。<strong>如信息不足无法判断请选n</strong></li>
+                    <li>数字可能以<strong>任何角度、任何大小</strong>书写，甚至上下颠倒</li>
+                    <li>请在<strong>有足够把握时</strong>再进行判断</li>
+                </ol>
             </div>
             <div id="videoContainer">
                 <img id="frameDisplay" src="" alt="视频截屏">
