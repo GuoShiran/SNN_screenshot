@@ -204,7 +204,7 @@
         let currentModuleIndex = 0;
         let currentFrameIndex = 0;
         let collectedData = [];
-        let userEmail = ''; // 存储用户邮箱
+        let userEmail = '';
 
         const MODULE_COUNT = 101; // module_1 到 module_101
         const SELECTED_MODULE_COUNT = 30; // 随机选择 30 个模块
@@ -273,7 +273,7 @@
             let loadedModules = 1;
             const totalModules = selectedModules.length;
 
-            const loadRemaining = remainingModules.map(async (moduleNum) => {
+            const loadRemaining = remainingModules.map(async (moduleNum, index) => {
                 const frames = await loadModuleFrames(moduleNum);
                 if (frames.length > 0) {
                     modules.push(frames);
@@ -282,6 +282,8 @@
                     loadingProgress.textContent = `加载进度：${progress}% (${loadedModules}/${totalModules} 模块)`;
                 } else {
                     console.warn(`模块 ${moduleNum} 加载失败，帧数为 0`);
+                    // 从 selectedModules 中移除加载失败的模块
+                    selectedModules.splice(loadedModules - 1 + index, 1);
                 }
             });
 
@@ -293,6 +295,7 @@
             }
 
             console.log(`总共加载了 ${modules.length} 个模块`);
+            console.log('最终加载的模块:', selectedModules);
             loadingProgress.textContent = '所有模块加载完成';
         }
 
@@ -349,7 +352,6 @@
             console.log(`当前模块索引: ${currentModuleIndex}, 选择的模块: ${selectedModules[currentModuleIndex]}`);
             console.log(`当前邮箱: ${userEmail}`);
 
-            // 检查模块索引
             if (currentModuleIndex >= modules.length || currentModuleIndex < 0) {
                 console.error('模块索引超出范围:', currentModuleIndex);
                 status.textContent = '错误：模块索引超出范围';
@@ -363,7 +365,6 @@
                 return;
             }
 
-            // 检查帧索引
             if (currentFrameIndex >= currentModule.length || currentFrameIndex < 0) {
                 console.error('帧索引超出范围:', { currentModuleIndex, currentFrameIndex, moduleLength: currentModule.length });
                 currentModuleIndex++;
@@ -382,7 +383,7 @@
             const data = {
                 timestamp: new Date().toISOString(),
                 email: userEmail || 'unknown',
-                module: selectedModules[currentModuleIndex] || 0,
+                module: selectedModules[currentModuleIndex] || 0, // 使用加载时的第 currentModuleIndex 个模块值
                 videoTime: frame.time ? frame.time.toFixed(2) : '0.00',
                 userInput: value
             };
