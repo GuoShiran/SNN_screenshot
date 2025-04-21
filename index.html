@@ -308,8 +308,8 @@
             }
 
             const currentModule = modules[currentModuleIndex];
-            console.log(`当前模块帧数: ${currentModule.length}, 当前帧索引: ${currentFrameIndex}`);
-            if (currentFrameIndex >= currentModule.length) {
+            console.log(`当前模块帧数: ${currentModule ? currentModule.length : '未定义'}, 当前帧索引: ${currentFrameIndex}`);
+            if (!currentModule || currentFrameIndex >= currentModule.length) {
                 currentModuleIndex++;
                 currentFrameIndex = 0;
                 showNextFrame();
@@ -328,7 +328,7 @@
                 const formData = new FormData();
                 formData.append('entry.1404874076', data.timestamp);
                 formData.append('entry.690842731', data.email);
-                formData.append('entry.1451353847', data.module.toString()); // 确保是字符串
+                formData.append('entry.1451353847', data.module.toString());
                 formData.append('entry.5521573744', data.videoTime);
                 formData.append('entry.540771953', data.userInput);
 
@@ -349,28 +349,41 @@
             console.log(`当前模块索引: ${currentModuleIndex}, 选择的模块: ${selectedModules[currentModuleIndex]}`);
             console.log(`当前邮箱: ${userEmail}`);
 
+            // 检查模块索引
             if (currentModuleIndex >= modules.length || currentModuleIndex < 0) {
                 console.error('模块索引超出范围:', currentModuleIndex);
+                status.textContent = '错误：模块索引超出范围';
                 return;
             }
 
             const currentModule = modules[currentModuleIndex];
-            if (!currentModule || currentFrameIndex >= currentModule.length || currentFrameIndex < 0) {
-                console.error('帧索引超出范围或模块未加载:', { currentModuleIndex, currentFrameIndex, moduleLength: currentModule ? currentModule.length : '未定义' });
+            if (!currentModule) {
+                console.error('当前模块未加载:', currentModuleIndex);
+                status.textContent = '错误：当前模块未加载';
+                return;
+            }
+
+            // 检查帧索引
+            if (currentFrameIndex >= currentModule.length || currentFrameIndex < 0) {
+                console.error('帧索引超出范围:', { currentModuleIndex, currentFrameIndex, moduleLength: currentModule.length });
+                currentModuleIndex++;
+                currentFrameIndex = 0;
+                showNextFrame();
                 return;
             }
 
             const frame = currentModule[currentFrameIndex];
-            if (!frame || !frame.time) {
+            if (!frame) {
                 console.error('帧数据无效:', frame);
+                status.textContent = '错误：帧数据无效';
                 return;
             }
 
             const data = {
                 timestamp: new Date().toISOString(),
-                email: userEmail, // 使用存储的邮箱
+                email: userEmail || 'unknown',
                 module: selectedModules[currentModuleIndex] || 0,
-                videoTime: frame.time.toFixed(2),
+                videoTime: frame.time ? frame.time.toFixed(2) : '0.00',
                 userInput: value
             };
             console.log('准备发送的数据:', data);
@@ -393,7 +406,7 @@
 
         // 提交并开始
         startButton.addEventListener('click', () => {
-            userEmail = emailInput.value.trim(); // 存储用户邮箱
+            userEmail = emailInput.value.trim();
             if (!userEmail) {
                 alert('请输入您的邮箱！');
                 return;
