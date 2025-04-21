@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>视频数据收集</title>
+    <title>实时手写数字识别</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
     <style>
         body {
@@ -22,8 +22,74 @@
             font-weight: 600;
             margin: 30px 0;
         }
+        /* 欢迎页面样式 */
+        #welcomePage {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            max-width: 600px;
+            width: 100%;
+        }
+        #welcomePage p {
+            color: #555;
+            font-size: 1em;
+            margin-bottom: 20px;
+        }
+        #emailInput {
+            padding: 10px;
+            font-size: 1em;
+            width: 100%;
+            max-width: 300px;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            margin-bottom: 10px;
+        }
+        #privacyNotice {
+            color: #777;
+            font-size: 0.9em;
+            margin-bottom: 20px;
+        }
+        #startButton {
+            padding: 12px 24px;
+            font-size: 1em;
+            font-weight: 500;
+            cursor: pointer;
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            transition: transform 0.1s ease, background-color 0.3s ease;
+        }
+        #startButton:hover {
+            background-color: #0056b3;
+            transform: translateY(-2px);
+        }
+        /* 互动页面样式 */
+        #mainPage {
+            display: none;
+            width: 100%;
+            max-width: 1200px;
+        }
+        .container {
+            display: flex;
+            flex-direction: row;
+            align-items: flex-start;
+            gap: 20px;
+            width: 100%;
+        }
+        #rulesContainer {
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            background: #fff;
+            padding: 15px;
+            width: 200px;
+            min-height: 300px;
+            color: #555;
+            font-size: 0.9em;
+        }
         #videoContainer {
-            position: relative;
             border: 1px solid #e0e0e0;
             border-radius: 8px;
             background: #fff;
@@ -36,17 +102,13 @@
             border-radius: 6px;
         }
         #inputPrompt {
-            position: absolute;
-            top: 100%;
-            left: 0;
             background: #fff;
             padding: 20px;
             border: 1px solid #e0e0e0;
             border-radius: 8px;
-            width: 100%;
             text-align: center;
             display: none;
-            margin-top: 10px;
+            width: 150px;
         }
         #inputPrompt p {
             margin: 0 0 15px;
@@ -55,8 +117,8 @@
             font-size: 1em;
         }
         #inputPrompt .button-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
+            display: flex;
+            flex-direction: column;
             gap: 10px;
         }
         #inputPrompt button {
@@ -88,30 +150,52 @@
     </style>
 </head>
 <body>
-    <h1>视频数据收集</h1>
-    <div id="videoContainer">
-        <img id="frameDisplay" src="" alt="视频截屏">
-        <div id="inputPrompt">
-            <p>请选择你的判断结果：</p>
-            <div class="button-grid">
-                <button onclick="submitInput('0')">0</button>
-                <button onclick="submitInput('1')">1</button>
-                <button onclick="submitInput('2')">2</button>
-                <button onclick="submitInput('3')">3</button>
-                <button onclick="submitInput('4')">4</button>
-                <button onclick="submitInput('5')">5</button>
-                <button onclick="submitInput('6')">6</button>
-                <button onclick="submitInput('7')">7</button>
-                <button onclick="submitInput('8')">8</button>
-                <button onclick="submitInput('9')">9</button>
-                <button onclick="submitInput('n')">n</button>
+    <!-- 欢迎页面 -->
+    <div id="welcomePage">
+        <h1>欢迎参与受访者实验</h1>
+        <p>请输入您的邮箱</p>
+        <input type="email" id="emailInput" placeholder="example@email.com">
+        <p id="privacyNotice">*仅供研究使用，您的个人信息将被严格保密</p>
+        <button id="startButton">提交并开始</button>
+    </div>
+
+    <!-- 互动页面 -->
+    <div id="mainPage">
+        <h1>实时手写数字识别</h1>
+        <div class="container">
+            <div id="rulesContainer">
+                <p>规则说明（待补充）</p>
+            </div>
+            <div id="videoContainer">
+                <img id="frameDisplay" src="" alt="视频截屏">
+            </div>
+            <div id="inputPrompt">
+                <p>请选择你的判断结果：</p>
+                <div class="button-grid">
+                    <button onclick="submitInput('0')">0</button>
+                    <button onclick="submitInput('1')">1</button>
+                    <button onclick="submitInput('2')">2</button>
+                    <button onclick="submitInput('3')">3</button>
+                    <button onclick="submitInput('4')">4</button>
+                    <button onclick="submitInput('5')">5</button>
+                    <button onclick="submitInput('6')">6</button>
+                    <button onclick="submitInput('7')">7</button>
+                    <button onclick="submitInput('8')">8</button>
+                    <button onclick="submitInput('9')">9</button>
+                    <button onclick="submitInput('n')">n</button>
+                </div>
             </div>
         </div>
+        <p id="statusContainer">状态：<span id="status">加载图片中...</span></p>
+        <p id="loadingProgress"></p>
     </div>
-    <p id="statusContainer">状态：<span id="status">加载图片中...</span></p>
-    <p id="loadingProgress"></p>
 
     <script>
+        const welcomePage = document.getElementById('welcomePage');
+        const mainPage = document.getElementById('mainPage');
+        const startButton = document.getElementById('startButton');
+        const emailInput = document.getElementById('emailInput');
+
         const frameDisplay = document.getElementById('frameDisplay');
         const inputPrompt = document.getElementById('inputPrompt');
         const status = document.getElementById('status');
@@ -128,9 +212,9 @@
         const FRAME_INTERVAL = 20; // 每帧间隔 20ms
         const BASE_URL = 'https://raw.githubusercontent.com/guoshiran/SNN_screenshot/data/';
 
-        // 随机选择模块
+        // 随机选择模块，忽略 module_66
         function shuffleModules() {
-            const moduleIndices = Array.from({ length: MODULE_COUNT }, (_, i) => i + 1);
+            const moduleIndices = Array.from({ length: MODULE_COUNT }, (_, i) => i + 1).filter(num => num !== 66);
             for (let i = moduleIndices.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
                 [moduleIndices[i], moduleIndices[j]] = [moduleIndices[j], moduleIndices[i]];
@@ -138,7 +222,7 @@
             return moduleIndices.slice(0, SELECTED_MODULE_COUNT);
         }
 
-        // 加载模块图片（不限制数量）
+        // 加载模块图片
         async function loadModuleFrames(moduleNum) {
             const frames = [];
             let frameIndex = 1;
@@ -183,7 +267,7 @@
 
             // 并行加载剩余模块
             const remainingModules = selectedModules.slice(1);
-            let loadedModules = 1; // 已加载第一个模块
+            let loadedModules = 1;
             const totalModules = selectedModules.length;
 
             const loadRemaining = remainingModules.map(async (moduleNum) => {
@@ -239,7 +323,8 @@
             const data = {
                 timestamp: new Date().toISOString(),
                 videoTime: frame.time.toFixed(2),
-                userInput: value
+                userInput: value,
+                email: emailInput.value // 记录用户邮箱
             };
             collectedData.push(data);
             status.textContent = `已记录：时间=${data.videoTime}s, 选择=${data.userInput}`;
@@ -255,6 +340,19 @@
             showNextFrame();
         }
 
+        // 提交并开始
+        startButton.addEventListener('click', () => {
+            if (!emailInput.value) {
+                alert('请输入您的邮箱！');
+                return;
+            }
+            welcomePage.style.display = 'none';
+            mainPage.style.display = 'block';
+            loadFrames();
+        });
+    </script>
+</body>
+</html>
         // 初始化
         document.addEventListener('DOMContentLoaded', loadFrames);
     </script>
