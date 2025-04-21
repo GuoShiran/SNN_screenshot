@@ -204,6 +204,7 @@
         let currentModuleIndex = 0;
         let currentFrameIndex = 0;
         let collectedData = [];
+        let userEmail = ''; // 存储用户邮箱
 
         const MODULE_COUNT = 101; // module_1 到 module_101
         const SELECTED_MODULE_COUNT = 30; // 随机选择 30 个模块
@@ -219,7 +220,7 @@
                 [moduleIndices[i], moduleIndices[j]] = [moduleIndices[j], moduleIndices[i]];
             }
             const selected = moduleIndices.slice(0, SELECTED_MODULE_COUNT);
-            console.log('随机选择的模块:', selected); // 添加日志
+            console.log('随机选择的模块:', selected);
             return selected;
         }
 
@@ -246,7 +247,7 @@
                 });
                 frameIndex++;
             }
-            console.log(`模块 ${moduleNum} 加载完成，帧数: ${frames.length}`); // 添加日志
+            console.log(`模块 ${moduleNum} 加载完成，帧数: ${frames.length}`);
             return frames;
         }
 
@@ -291,13 +292,13 @@
                 return;
             }
 
-            console.log(`总共加载了 ${modules.length} 个模块`); // 添加日志
+            console.log(`总共加载了 ${modules.length} 个模块`);
             loadingProgress.textContent = '所有模块加载完成';
         }
 
         // 显示下一帧
         function showNextFrame() {
-            console.log(`当前模块索引: ${currentModuleIndex}, 总模块数: ${modules.length}`); // 添加日志
+            console.log(`当前模块索引: ${currentModuleIndex}, 总模块数: ${modules.length}`);
             if (currentModuleIndex >= modules.length) {
                 status.textContent = '所有模块已展示，数据已收集';
                 console.log('收集的数据：', collectedData);
@@ -307,7 +308,7 @@
             }
 
             const currentModule = modules[currentModuleIndex];
-            console.log(`当前模块帧数: ${currentModule.length}, 当前帧索引: ${currentFrameIndex}`); // 添加日志
+            console.log(`当前模块帧数: ${currentModule.length}, 当前帧索引: ${currentFrameIndex}`);
             if (currentFrameIndex >= currentModule.length) {
                 currentModuleIndex++;
                 currentFrameIndex = 0;
@@ -327,7 +328,7 @@
                 const formData = new FormData();
                 formData.append('entry.1404874076', data.timestamp);
                 formData.append('entry.690842731', data.email);
-                formData.append('entry.1451353847', data.module);
+                formData.append('entry.1451353847', data.module.toString()); // 确保是字符串
                 formData.append('entry.5521573744', data.videoTime);
                 formData.append('entry.540771953', data.userInput);
 
@@ -345,18 +346,34 @@
         // 处理用户输入
         function submitInput(value) {
             console.log(`按钮点击，值: ${value}`);
-            console.log(`当前模块索引: ${currentModuleIndex}, 选择的模块: ${selectedModules[currentModuleIndex]}`); // 添加日志
+            console.log(`当前模块索引: ${currentModuleIndex}, 选择的模块: ${selectedModules[currentModuleIndex]}`);
+            console.log(`当前邮箱: ${userEmail}`);
+
+            if (currentModuleIndex >= modules.length || currentModuleIndex < 0) {
+                console.error('模块索引超出范围:', currentModuleIndex);
+                return;
+            }
+
             const currentModule = modules[currentModuleIndex];
+            if (!currentModule || currentFrameIndex >= currentModule.length || currentFrameIndex < 0) {
+                console.error('帧索引超出范围或模块未加载:', { currentModuleIndex, currentFrameIndex, moduleLength: currentModule ? currentModule.length : '未定义' });
+                return;
+            }
+
             const frame = currentModule[currentFrameIndex];
+            if (!frame || !frame.time) {
+                console.error('帧数据无效:', frame);
+                return;
+            }
 
             const data = {
                 timestamp: new Date().toISOString(),
-                email: emailInput.value,
-                module: selectedModules[currentModuleIndex] || 0, // 确保 module 有值
+                email: userEmail, // 使用存储的邮箱
+                module: selectedModules[currentModuleIndex] || 0,
                 videoTime: frame.time.toFixed(2),
                 userInput: value
             };
-            console.log('准备发送的数据:', data); // 添加日志
+            console.log('准备发送的数据:', data);
             collectedData.push(data);
             status.textContent = `已记录：时间=${data.videoTime}s, 选择=${data.userInput}`;
 
@@ -376,10 +393,12 @@
 
         // 提交并开始
         startButton.addEventListener('click', () => {
-            if (!emailInput.value) {
+            userEmail = emailInput.value.trim(); // 存储用户邮箱
+            if (!userEmail) {
                 alert('请输入您的邮箱！');
                 return;
             }
+            console.log('用户输入的邮箱:', userEmail);
             welcomePage.style.display = 'none';
             mainPage.style.display = 'block';
             loadFrames();
