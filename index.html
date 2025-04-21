@@ -175,4 +175,215 @@
                     <button onclick="submitInput('2')">2</button>
                     <button onclick="submitInput('3')">3</button>
                     <button onclick="submitInput('4')">4</button>
-                    <button onclick="
+                    <button onclick="submitInput('5')">5</button>
+                    <button onclick="submitInput('6')">6</button>
+                    <button onclick="submitInput('7')">7</button>
+                    <button onclick="submitInput('8')">8</button>
+                    <button onclick="submitInput('9')">9</button>
+                    <button onclick="submitInput('n')">n</button>
+                </div>
+            </div>
+        </div>
+        <p id="statusContainer">状态：<span id="status">加载图片中...</span></p>
+        <p id="loadingProgress"></p>
+    </div>
+
+    <script>
+        const welcomePage = document.getElementById('welcomePage');
+        const mainPage = document.getElementById('mainPage');
+        const startButton = document.getElementById('startButton');
+        const emailInput = document.getElementById('emailInput');
+
+        const frameDisplay = document.getElementById('frameDisplay');
+        const inputPrompt = document.getElementById('inputPrompt');
+        const status = document.getElementById('status');
+        const loadingProgress = document.getElementById('loadingProgress');
+
+        let modules = [];
+        let selectedModules = [];
+        let currentModuleIndex = 0;
+        let currentFrameIndex = 0;
+        let collectedData = [];
+
+        const MODULE_COUNT = 101; // module_1 到 module_101
+        const SELECTED_MODULE_COUNT = 30; // 随机选择 30 个模块
+        const FRAME_INTERVAL = 20; // 每帧间隔 20ms
+        const BASE_URL = 'https://raw.githubusercontent.com/guoshiran/SNN_screenshot/data/';
+        const GOOGLE_FORM_URL = 'https://docs.google.com/forms/u/0/d/e/1FAIpQLSfusBxX1cNbsastoKk1CwRMNt6lNvZ2290zl2XQe0zBWP1wQQ/formResponse';
+
+        // 随机选择模块，忽略 module_66
+        function shuffleModules() {
+            const moduleIndices = Array.from({ length: MODULE_COUNT }, (_, i) => i + 1).filter(num => num !== 66);
+            for (let i = moduleIndices.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [moduleIndices[i], moduleIndices[j]] = [moduleIndices[j], moduleIndices[i]];
+            }
+            const selected = moduleIndices.slice(0, SELECTED_MODULE_COUNT);
+            console.log('随机选择的模块:', selected); // 添加日志
+            return selected;
+        }
+
+        // 加载模块图片
+        async function loadModuleFrames(moduleNum) {
+            const frames = [];
+            let frameIndex = 1;
+
+            while (true) {
+                const frameUrl = `${BASE_URL}module_${moduleNum}/module_${moduleNum}_frame_${frameIndex}.png`;
+                const img = new Image();
+                img.src = frameUrl;
+
+                const loaded = await new Promise(resolve => {
+                    img.onload = () => resolve(true);
+                    img.onerror = () => resolve(false);
+                });
+
+                if (!loaded) break;
+
+                frames.push({
+                    url: frameUrl,
+                    time: ((frameIndex - 1) * FRAME_INTERVAL) / 1000
+                });
+                frameIndex++;
+            }
+            console.log(`模块 ${moduleNum} 加载完成，帧数: ${frames.length}`); // 添加日志
+            return frames;
+        }
+
+        // 加载所有选定模块（并行加载）
+        async function loadFrames() {
+            selectedModules = shuffleModules();
+            status.textContent = `加载模块 ${selectedModules.join(', ')}...`;
+
+            // 优先加载第一个模块
+            const firstModuleNum = selectedModules[0];
+            const firstModuleFrames = await loadModuleFrames(firstModuleNum);
+            if (firstModuleFrames.length > 0) {
+                modules.push(firstModuleFrames);
+                status.textContent = '第一个模块加载完成，开始展示';
+                showNextFrame();
+            } else {
+                status.textContent = '第一个模块加载失败，请检查图片路径';
+                return;
+            }
+
+            // 并行加载剩余模块
+            const remainingModules = selectedModules.slice(1);
+            let loadedModules = 1;
+            const totalModules = selectedModules.length;
+
+            const loadRemaining = remainingModules.map(async (moduleNum) => {
+                const frames = await loadModuleFrames(moduleNum);
+                if (frames.length > 0) {
+                    modules.push(frames);
+                    loadedModules++;
+                    const progress = Math.round((loadedModules / totalModules) * 100);
+                    loadingProgress.textContent = `加载进度：${progress}% (${loadedModules}/${totalModules} 模块)`;
+                } else {
+                    console.warn(`模块 ${moduleNum} 加载失败，帧数为 0`);
+                }
+            });
+
+            await Promise.all(loadRemaining);
+
+            if (modules.length === 0) {
+                status.textContent = '加载失败，请检查图片路径';
+                return;
+            }
+
+            console.log(`总共加载了 ${modules.length} 个模块`); // 添加日志
+            loadingProgress.textContent = '所有模块加载完成';
+        }
+
+        // 显示下一帧
+        function showNextFrame() {
+            console.log(`当前模块索引: ${currentModuleIndex}, 总模块数: ${modules.length}`); // 添加日志
+            if (currentModuleIndex >= modules.length) {
+                status.textContent = '所有模块已展示，数据已收集';
+                console.log('收集的数据：', collectedData);
+                alert('数据收集完成！');
+                inputPrompt.style.display = 'none';
+                return;
+            }
+
+            const currentModule = modules[currentModuleIndex];
+            console.log(`当前模块帧数: ${currentModule.length}, 当前帧索引: ${currentFrameIndex}`); // 添加日志
+            if (currentFrameIndex >= currentModule.length) {
+                currentModuleIndex++;
+                currentFrameIndex = 0;
+                showNextFrame();
+                return;
+            }
+
+            const frame = currentModule[currentFrameIndex];
+            frameDisplay.src = frame.url;
+            inputPrompt.style.display = 'block';
+            status.textContent = `模块 ${selectedModules[currentModuleIndex]}，帧 ${currentFrameIndex + 1}/${currentModule.length}`;
+        }
+
+        // 发送数据到 Google Forms
+        async function sendToGoogleSheets(data) {
+            try {
+                const formData = new FormData();
+                formData.append('entry.1404874076', data.timestamp);
+                formData.append('entry.690842731', data.email);
+                formData.append('entry.1451353847', data.module);
+                formData.append('entry.5521573744', data.videoTime);
+                formData.append('entry.540771953', data.userInput);
+
+                const response = await fetch(GOOGLE_FORM_URL, {
+                    method: 'POST',
+                    body: formData,
+                    mode: 'no-cors'
+                });
+                console.log('数据已发送到 Google Forms:', data);
+            } catch (error) {
+                console.error('发送数据到 Google Forms 时出错:', error);
+            }
+        }
+
+        // 处理用户输入
+        function submitInput(value) {
+            console.log(`按钮点击，值: ${value}`);
+            console.log(`当前模块索引: ${currentModuleIndex}, 选择的模块: ${selectedModules[currentModuleIndex]}`); // 添加日志
+            const currentModule = modules[currentModuleIndex];
+            const frame = currentModule[currentFrameIndex];
+
+            const data = {
+                timestamp: new Date().toISOString(),
+                email: emailInput.value,
+                module: selectedModules[currentModuleIndex] || 0, // 确保 module 有值
+                videoTime: frame.time.toFixed(2),
+                userInput: value
+            };
+            console.log('准备发送的数据:', data); // 添加日志
+            collectedData.push(data);
+            status.textContent = `已记录：时间=${data.videoTime}s, 选择=${data.userInput}`;
+
+            // 发送到 Google Forms
+            sendToGoogleSheets(data);
+
+            inputPrompt.style.display = 'none';
+
+            if (value === 'n') {
+                currentFrameIndex++;
+            } else {
+                currentModuleIndex++;
+                currentFrameIndex = 0;
+            }
+            showNextFrame();
+        }
+
+        // 提交并开始
+        startButton.addEventListener('click', () => {
+            if (!emailInput.value) {
+                alert('请输入您的邮箱！');
+                return;
+            }
+            welcomePage.style.display = 'none';
+            mainPage.style.display = 'block';
+            loadFrames();
+        });
+    </script>
+</body>
+</html>
